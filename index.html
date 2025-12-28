@@ -3,78 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>🎄 圣诞星云 - 手机极速版</title>
+    <title>🎄 指尖魔法 - 诊断版 V77</title>
     <style>
-        /* ================= 基础设置 ================= */
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; touch-action: none; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: monospace; touch-action: none; }
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
         
-        /* 启动界面 (遮罩) */
         #start-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 9999;
+            background: #111; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 0.5s;
             padding: 20px;
-            text-align: center;
         }
         
-        /* 启动按钮 */
         #start-btn {
-            padding: 15px 30px;
-            font-size: 22px;
-            color: #00ff00;
-            background: rgba(0, 50, 0, 0.8);
-            border: 2px solid #00ff00;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-bottom: 20px;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+            padding: 15px 40px; font-size: 20px;
+            color: #000; background: #00ff00;
+            border: none; border-radius: 50px;
+            cursor: pointer; margin-bottom: 20px;
+            font-weight: bold; box-shadow: 0 0 20px rgba(0,255,0,0.4);
+            opacity: 0.5; pointer-events: none; /* 默认禁用，加载完才开启 */
+            transition: all 0.3s;
         }
-        #start-btn:active { transform: scale(0.95); }
-
-        /* 调试日志窗口 */
-        #console-log {
-            width: 100%;
-            max-width: 400px;
-            height: 150px;
-            background: rgba(20, 20, 20, 0.9);
-            border: 1px solid #333;
-            color: #00ffcc;
-            font-size: 12px;
-            text-align: left;
-            padding: 10px;
-            overflow-y: auto;
-            border-radius: 4px;
-            font-family: monospace;
-        }
-        .log-line { margin: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px; }
-        .log-error { color: #ff3333; }
-        .log-success { color: #33ff33; }
-
-        /* 隐藏视频源 */
-        #webcam-video { display: none; }
+        #start-btn.ready { opacity: 1; pointer-events: auto; }
         
-        /* UI 按钮 */
+        #console-log {
+            width: 90%; height: 200px;
+            background: #000; border: 1px solid #333;
+            color: #ccc; font-size: 11px;
+            padding: 10px; overflow-y: auto;
+            border-radius: 4px; text-align: left;
+        }
+        .log-line { border-bottom: 1px solid #222; padding: 2px 0; }
+        .err { color: #ff3333; background: rgba(50,0,0,0.5); }
+        .ok { color: #33ff33; }
+        .warn { color: #ffff33; }
+
+        #webcam-video { display: none; }
         #ui-layer { position: absolute; bottom: 20px; left: 20px; z-index: 10; display: flex; gap: 15px; }
         .icon-btn { 
-            width: 50px; height: 50px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.15); 
-            border: 1px solid rgba(255, 255, 255, 0.5); 
-            color: #d4af37; font-size: 24px;
-            cursor: pointer; 
+            width: 50px; height: 50px; border-radius: 50%;
+            background: rgba(255,255,255,0.2); 
+            color: gold; font-size: 24px;
             display: flex; align-items: center; justify-content: center;
             backdrop-filter: blur(5px);
         }
     </style>
 
+    <script>
+        function sysLog(msg, type='info') {
+            const box = document.getElementById('console-log');
+            if(!box) return;
+            const line = document.createElement('div');
+            line.className = 'log-line ' + type;
+            line.innerText = `[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`;
+            box.appendChild(line);
+            box.scrollTop = box.scrollHeight;
+        }
+        
+        // 全局错误捕获 (捕捉脚本加载失败)
+        window.onerror = function(msg, url, line) {
+            sysLog(`❌ 致命错误: ${msg} (行:${line})`, 'err');
+            // 如果是 Script error，通常是跨域或网络问题
+            if (msg.toLowerCase().includes('script error')) {
+                sysLog("⚠️ 提示: 可能是 CDN 网络不通，请检查 VPN 或网络。", 'warn');
+            }
+            return false;
+        };
+
+        // 供模块调用的启动函数占位符
+        window.appReady = false;
+        window.doStart = function() {
+            sysLog("⏳ 正在等待脚本加载...", 'warn');
+        };
+    </script>
+
     <script type="importmap">
         {
             "imports": {
-                "three": "https://registry.npmmirror.com/three/0.160.0/files/build/three.module.js",
-                "three/addons/": "https://registry.npmmirror.com/three/0.160.0/files/examples/jsm/",
-                "@mediapipe/tasks-vision": "https://registry.npmmirror.com/@mediapipe/tasks-vision/0.10.3/files/+esm"
+                "three": "https://esm.sh/three@0.160.0",
+                "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/",
+                "@mediapipe/tasks-vision": "https://esm.sh/@mediapipe/tasks-vision@0.10.8"
             }
         }
     </script>
@@ -82,20 +90,20 @@
 <body>
 
     <div id="start-screen">
-        <h1 style="color:#d4af37; margin-bottom: 30px;">指尖魔法 V76</h1>
-        <button id="start-btn" onclick="startApp()">🚀 点击启动</button>
+        <h2 style="color:#fff; margin-bottom:10px;">指尖魔法 V77</h2>
+        <button id="start-btn" onclick="window.doStart()">⏳ 正在下载组件...</button>
         <div id="console-log">
-            <div class="log-line">等待用户点击启动...</div>
+            <div class="log-line">系统初始化...</div>
+            <div class="log-line">正在尝试连接 CDN 服务器...</div>
         </div>
     </div>
 
     <div id="canvas-container"></div>
-    
     <video id="webcam-video" playsinline muted autoplay></video>
 
     <div id="ui-layer">
-        <div class="icon-btn" onclick="setMode('TREE')">🌲</div>
-        <div class="icon-btn" onclick="setMode('SCATTER')">✨</div>
+        <div class="icon-btn" onclick="window.setMode('TREE')">🌲</div>
+        <div class="icon-btn" onclick="window.setMode('SCATTER')">✨</div>
     </div>
 
     <script type="module">
@@ -105,272 +113,156 @@
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 
-        // === 0. 日志系统 ===
-        function log(msg, type='') {
-            const consoleBox = document.getElementById('console-log');
-            const line = document.createElement('div');
-            line.className = 'log-line ' + (type === 'error' ? 'log-error' : (type === 'success' ? 'log-success' : ''));
-            line.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
-            consoleBox.appendChild(line);
-            consoleBox.scrollTop = consoleBox.scrollHeight;
-            console.log(msg);
-        }
+        // 脚本加载成功，激活按钮
+        sysLog("✅ 核心库 (Three.js/MediaPipe) 加载成功!", "ok");
+        const startBtn = document.getElementById('start-btn');
+        startBtn.innerText = "🚀 点击启动";
+        startBtn.classList.add('ready');
+        window.appReady = true;
 
-        // === 1. 参数配置 ===
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
+        // === 核心逻辑 ===
         const CONFIG = {
-            count: isMobile ? 6000 : 25000, // 进一步降低手机粒子数以保命
-            particleSize: isMobile ? 1.0 : 0.7,
-            treeHeight: 24,
-            treeRadius: 8,
-            colors: { champagneGold: 0xffd966, deepGreen: 0x03180a, accentRed: 0x990000 },
-            tree: { exposure: 2.2, bloom: 1.5, emissive: 8.0 },   
-            scatter: { exposure: 1.2, bloom: 0.8, emissive: 1.0 }
+            count: 6000, // 手机端保命设置
+            colors: { gold: 0xffd966, green: 0x03180a, red: 0x990000 },
+            exp: { tree: 2.0, scatter: 1.2 }
         };
 
-        let scene, camera, renderer, composer, bloomPass;
-        let mainGroup, particleSystem = [], photoMeshGroup = new THREE.Group();
-        let goldMat;
+        let scene, camera, renderer, composer;
+        let particleSystem, goldMat;
         let handLandmarker, videoElement;
-        let STATE = { mode: 'TREE', handDetected: false, handX: 0, handY: 0 };
+        let STATE = { mode: 'TREE', handX: 0, handY: 0 };
 
-        // === 2. 启动逻辑 ===
-        window.startApp = async () => {
-            const btn = document.getElementById('start-btn');
-            btn.style.display = 'none'; // 隐藏按钮防止重复点击
-            log("用户点击启动...");
+        // 真正的启动函数
+        window.doStart = async function() {
+            if (!window.appReady) return;
+            startBtn.style.display = 'none';
+            sysLog("用户点击启动...");
 
             try {
-                // 1. 初始化 3D 场景
-                log("正在初始化 3D 引擎...");
+                // 1. 初始化 3D
+                sysLog("初始化 3D 场景...");
                 initThree();
                 createParticles();
-                log("3D 引擎启动成功", 'success');
+                sysLog("3D 渲染器就绪", "ok");
 
-                // 2. 尝试加载 AI (设置10秒超时，防止卡死)
-                log("开始加载 AI 模型 (需下载约10MB)...");
+                // 2. 加载 AI
+                sysLog("正在加载 AI 模型 (hand_landmarker.task)...");
+                sysLog("请确保 .task 文件已上传到 GitHub!");
                 
-                const aiPromise = initMediaPipeCN();
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error("AI 加载超时")), 10000)
-                );
+                // 尝试加载
+                const vision = await FilesetResolver.forVisionTasks("https://esm.sh/@mediapipe/tasks-vision@0.10.8/wasm");
+                handLandmarker = await HandLandmarker.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: "./hand_landmarker.task", // 本地文件
+                        delegate: "GPU"
+                    },
+                    runningMode: "VIDEO",
+                    numHands: 1
+                });
+                sysLog("AI 模型加载成功!", "ok");
 
-                await Promise.race([aiPromise, timeoutPromise]);
+                // 3. 摄像头
+                sysLog("请求摄像头权限...");
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user", width: 320, height: 240 } 
+                });
                 
-                log("系统全部就绪！进入场景...", 'success');
-                enterScene();
+                videoElement = document.getElementById('webcam-video');
+                videoElement.srcObject = stream;
+                videoElement.onloadedmetadata = () => {
+                    videoElement.play();
+                    sysLog("摄像头画面已获取", "ok");
+                    enterScene();
+                    predictWebcam();
+                };
 
             } catch (e) {
-                log("⚠️ 警告: " + e.message, 'error');
-                log("正在尝试以【演示模式】进入...");
-                // 即使 AI 失败，也强制进入场景，不让用户卡在黑屏
-                enterScene();
+                sysLog("❌ 启动阻断: " + e.message, "err");
+                if(e.message.includes("404") || e.message.includes("fetch")) {
+                    sysLog("👉 检查: hand_landmarker.task 文件是否存在？", "warn");
+                }
+                // 强制进入演示模式
+                setTimeout(enterScene, 2000);
             }
         };
 
         function enterScene() {
-            const screen = document.getElementById('start-screen');
-            screen.style.opacity = 0;
-            setTimeout(() => screen.remove(), 800);
+            document.getElementById('start-screen').style.display = 'none';
             animate();
         }
 
-        // === 3. 渲染引擎 ===
+        // 简单的 Three.js 初始化
         function initThree() {
             const container = document.getElementById('canvas-container');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x000000); 
-            scene.fog = new THREE.FogExp2(0x000000, 0.01);
+            scene.background = new THREE.Color(0x000000);
 
-            camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 2, isMobile ? 70 : 50);
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 60);
 
-            renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: "high-performance" });
+            renderer = new THREE.WebGLRenderer({ antialias: false });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-            renderer.toneMapping = THREE.ReinhardToneMapping;
-            renderer.toneMappingExposure = 1.5; 
             container.appendChild(renderer.domElement);
 
-            mainGroup = new THREE.Group();
-            scene.add(mainGroup);
-            mainGroup.add(photoMeshGroup);
-
+            // Bloom
             const renderScene = new RenderPass(scene, camera);
-            bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 2.0; 
-            bloomPass.strength = 0.6;
-            bloomPass.radius = 0.4;
-
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
             composer = new EffectComposer(renderer);
             composer.addPass(renderScene);
             composer.addPass(bloomPass);
-            
-            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-            const innerLight = new THREE.PointLight(0xffaa00, 2, 20);
-            innerLight.position.set(0, 5, 0); mainGroup.add(innerLight);
-            const spotGold = new THREE.SpotLight(0xffcc66, 1200);
-            spotGold.position.set(30, 40, 40); scene.add(spotGold);
-            
-            window.addEventListener('resize', onWindowResize);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                composer.setSize(window.innerWidth, window.innerHeight);
+            });
         }
 
         function createParticles() {
-            const sphereGeo = new THREE.SphereGeometry(isMobile ? 0.6 : 0.5, 6, 6); 
-            const boxGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(CONFIG.count * 3);
+            for(let i=0; i<CONFIG.count*3; i++) pos[i] = (Math.random()-0.5) * 60;
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
             
-            goldMat = new THREE.MeshStandardMaterial({ 
-                color: CONFIG.colors.champagneGold, metalness: 1.0, roughness: 0.1, emissiveIntensity: 2.0 
-            });
-            const greenMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.deepGreen, metalness: 0.2 });
-            const redMat = new THREE.MeshPhysicalMaterial({ color: CONFIG.colors.accentRed, metalness: 0.3 });
-
-            for (let i = 0; i < CONFIG.count; i++) {
-                const rand = Math.random();
-                let mesh;
-                if (rand < 0.60) mesh = new THREE.Mesh(boxGeo, goldMat);
-                else mesh = new THREE.Mesh(sphereGeo, redMat);
-
-                const s = 0.4 + Math.random() * 0.5;
-                mesh.scale.set(s,s,s);
-                
-                const h = CONFIG.treeHeight;
-                let t = Math.pow(Math.random(), 0.8);
-                const y = (t * h) - (h/2);
-                const rMax = Math.max(0.5, CONFIG.treeRadius * (1.0 - t));
-                const angle = t * 50 * Math.PI + Math.random() * Math.PI;
-                const r = rMax * (0.8 + Math.random() * 0.4);
-                
-                const p = {
-                    mesh: mesh,
-                    treePos: new THREE.Vector3(Math.cos(angle)*r, y, Math.sin(angle)*r),
-                    scatterPos: new THREE.Vector3((Math.random()-0.5)*30, (Math.random()-0.5)*30, (Math.random()-0.5)*15),
-                    offset: Math.random() * 100
-                };
-                mesh.position.copy(p.treePos);
-                mainGroup.add(mesh);
-                particleSystem.push(p);
-            }
-        }
-
-        // === 3. AI 初始化 (分步加载 + 日志) ===
-        async function initMediaPipeCN() {
-            videoElement = document.getElementById('webcam-video');
-
-            // 1. 加载 WASM
-            log("正在下载视觉引擎 (WASM)...");
-            const vision = await FilesetResolver.forVisionTasks("https://registry.npmmirror.com/@mediapipe/tasks-vision/0.10.3/files/wasm");
-            log("视觉引擎加载完成", 'success');
-            
-            // 2. 加载模型
-            log("正在加载手势模型 (hand_landmarker.task)...");
-            handLandmarker = await HandLandmarker.createFromOptions(vision, {
-                baseOptions: {
-                    modelAssetPath: "./hand_landmarker.task", 
-                    delegate: "GPU"
-                },
-                runningMode: "VIDEO",
-                numHands: 1
-            });
-            log("AI 模型加载完成", 'success');
-            
-            // 3. 启动摄像头
-            log("正在请求摄像头权限...");
-            const constraints = { 
-                video: { 
-                    facingMode: "user",
-                    width: { ideal: 320 },
-                    height: { ideal: 240 }
-                } 
-            };
-            
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            videoElement.srcObject = stream;
-            log("摄像头权限已获取", 'success');
-            
-            return new Promise((resolve) => {
-                videoElement.onloadedmetadata = () => {
-                    videoElement.play();
-                    predictWebcam();
-                    log("视频流开始播放", 'success');
-                    resolve(true);
-                };
-            });
+            goldMat = new THREE.PointsMaterial({ color: CONFIG.colors.gold, size: 0.8, transparent: true, blending: THREE.AdditiveBlending });
+            particleSystem = new THREE.Points(geo, goldMat);
+            scene.add(particleSystem);
         }
 
         async function predictWebcam() {
-            if (!videoElement || !handLandmarker) return;
-            // 确保视频正在播放
-            if (videoElement.currentTime > 0 && !videoElement.paused && !videoElement.ended) {
-                let startTime = performance.now();
-                const results = handLandmarker.detectForVideo(videoElement, startTime);
-                
-                if (results.landmarks && results.landmarks.length > 0) {
-                    STATE.handDetected = true;
+            if (handLandmarker && videoElement.videoWidth > 0) {
+                const results = handLandmarker.detectForVideo(videoElement, performance.now());
+                if (results.landmarks.length > 0) {
                     const lm = results.landmarks[0];
-                    STATE.handX = (lm[9].x - 0.5) * 2; 
-                    STATE.handY = (lm[9].y - 0.5) * 2; 
-                    processLogic(lm);
+                    // 简单手势逻辑
+                    let fingers = 0;
+                    if(lm[8].y < lm[6].y) fingers++;
+                    if(lm[12].y < lm[10].y) fingers++;
+                    if(lm[16].y < lm[14].y) fingers++;
+                    if(lm[20].y < lm[18].y) fingers++;
+                    
+                    if(fingers >= 4) window.setMode('SCATTER');
+                    else if(fingers <= 1) window.setMode('TREE');
                 }
             }
             requestAnimationFrame(predictWebcam);
         }
 
-        function processLogic(lm) {
-            let fingers = 0;
-            if (lm[8].y < lm[6].y) fingers++;
-            if (lm[12].y < lm[10].y) fingers++;
-            if (lm[16].y < lm[14].y) fingers++;
-            if (lm[20].y < lm[18].y) fingers++;
-
-            if (fingers >= 4 && STATE.mode !== 'SCATTER') setMode('SCATTER');
-            if (fingers <= 1 && STATE.mode !== 'TREE') setMode('TREE');
-        }
-
         function animate() {
             requestAnimationFrame(animate);
-            
-            let targetExp = (STATE.mode === 'TREE') ? CONFIG.tree.exposure : CONFIG.scatter.exposure;
-            let targetEmissive = (STATE.mode === 'TREE') ? CONFIG.tree.emissive : CONFIG.scatter.emissive;
-            
-            renderer.toneMappingExposure = THREE.MathUtils.lerp(renderer.toneMappingExposure, targetExp, 0.05);
-            if(goldMat) goldMat.emissiveIntensity = THREE.MathUtils.lerp(goldMat.emissiveIntensity, targetEmissive, 0.05);
-
-            if (STATE.mode === 'SCATTER' && STATE.handDetected) {
-                mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, mainGroup.rotation.y + STATE.handX * 0.05, 0.1);
-                mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, STATE.handY * 0.5, 0.1);
+            if(STATE.mode === 'SCATTER') {
+                particleSystem.rotation.y += 0.01;
+                particleSystem.scale.setScalar(1.5);
             } else {
-                mainGroup.rotation.y += 0.005;
-                mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, 0, 0.05);
+                particleSystem.rotation.y += 0.002;
+                particleSystem.scale.setScalar(1.0);
             }
-
-            const count = particleSystem.length;
-            for(let i=0; i<count; i++) {
-                const p = particleSystem[i];
-                let target = (STATE.mode === 'TREE') ? p.treePos : p.scatterPos;
-                // 手机优化：直接设置不插值，或者插值系数大一点
-                p.mesh.position.x += (target.x - p.mesh.position.x) * 0.1;
-                p.mesh.position.y += (target.y - p.mesh.position.y) * 0.1;
-                p.mesh.position.z += (target.z - p.mesh.position.z) * 0.1;
-                
-                if(i % 3 === 0) { // 减少动画计算
-                    const s = 1 + 0.3 * Math.sin(Date.now() * 0.003 + p.offset);
-                    p.mesh.scale.set(s, s, s);
-                }
-            }
-
             composer.render();
         }
 
-        window.setMode = (m) => { STATE.mode = m; };
-        
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            composer.setSize(window.innerWidth, window.innerHeight);
-        }
+        window.setMode = (m) => STATE.mode = m;
     </script>
 </body>
 </html>
