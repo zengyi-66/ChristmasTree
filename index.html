@@ -2,11 +2,11 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🎄 圣诞星云 - 手机适配版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>🎄 圣诞星云 - 手机极速版</title>
     <style>
         /* ================= 基础设置 ================= */
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Microsoft YaHei', sans-serif; touch-action: none; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; touch-action: none; }
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
         
         /* 启动界面 (遮罩) */
@@ -15,50 +15,58 @@
             background: #000; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: opacity 0.5s;
+            padding: 20px;
+            text-align: center;
         }
         
         /* 启动按钮 */
         #start-btn {
-            padding: 15px 40px;
-            font-size: 24px;
-            color: #d4af37;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid #d4af37;
-            border-radius: 50px;
+            padding: 15px 30px;
+            font-size: 22px;
+            color: #00ff00;
+            background: rgba(0, 50, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 8px;
             cursor: pointer;
-            font-family: 'Courier New', Courier, monospace;
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
-            animation: pulse 2s infinite;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
         }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        #start-btn:active { transform: scale(0.95); }
 
-        .loader-text { color: #666; margin-top: 20px; font-size: 14px; }
-        
-        /* 错误提示 */
-        #error-log {
-            position: absolute; bottom: 10px; left: 0; width: 100%;
-            text-align: center; color: red; font-size: 12px;
-            z-index: 10000; pointer-events: none;
+        /* 调试日志窗口 */
+        #console-log {
+            width: 100%;
+            max-width: 400px;
+            height: 150px;
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid #333;
+            color: #00ffcc;
+            font-size: 12px;
+            text-align: left;
+            padding: 10px;
+            overflow-y: auto;
+            border-radius: 4px;
+            font-family: monospace;
         }
+        .log-line { margin: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px; }
+        .log-error { color: #ff3333; }
+        .log-success { color: #33ff33; }
 
         /* 隐藏视频源 */
         #webcam-video { display: none; }
         
         /* UI 按钮 */
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        #ui-layer { position: absolute; bottom: 20px; left: 20px; z-index: 10; display: flex; gap: 15px; }
         .icon-btn { 
-            pointer-events: auto;
-            width: 45px; height: 45px;
+            width: 50px; height: 50px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1); 
-            border: 1px solid rgba(212, 175, 55, 0.5); 
-            color: #d4af37; font-size: 20px;
+            background: rgba(255, 255, 255, 0.15); 
+            border: 1px solid rgba(255, 255, 255, 0.5); 
+            color: #d4af37; font-size: 24px;
             cursor: pointer; 
             display: flex; align-items: center; justify-content: center;
-            margin-bottom: 15px;
             backdrop-filter: blur(5px);
         }
-        #left-sidebar { position: absolute; top: 50%; left: 20px; transform: translateY(-50%); display: flex; flex-direction: column; }
     </style>
 
     <script type="importmap">
@@ -74,22 +82,20 @@
 <body>
 
     <div id="start-screen">
-        <button id="start-btn" onclick="startApp()">点击开始 (START)</button>
-        <div class="loader-text" id="status-text">Ready to launch...</div>
+        <h1 style="color:#d4af37; margin-bottom: 30px;">指尖魔法 V76</h1>
+        <button id="start-btn" onclick="startApp()">🚀 点击启动</button>
+        <div id="console-log">
+            <div class="log-line">等待用户点击启动...</div>
+        </div>
     </div>
 
-    <div id="error-log"></div>
     <div id="canvas-container"></div>
     
-    <video id="webcam-video" playsinline muted></video>
-    <canvas id="webcam-canvas" style="display:none;"></canvas>
+    <video id="webcam-video" playsinline muted autoplay></video>
 
     <div id="ui-layer">
-        <div id="left-sidebar">
-            <div class="icon-btn" onclick="setMode('TREE')">🌲</div>
-            <div class="icon-btn" onclick="setMode('SCATTER')">✨</div>
-            <div class="icon-btn" onclick="toggleFullScreen()">⛶</div>
-        </div>
+        <div class="icon-btn" onclick="setMode('TREE')">🌲</div>
+        <div class="icon-btn" onclick="setMode('SCATTER')">✨</div>
     </div>
 
     <script type="module">
@@ -99,19 +105,26 @@
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 
-        // === 0. 手机端检测 & 参数适配 ===
+        // === 0. 日志系统 ===
+        function log(msg, type='') {
+            const consoleBox = document.getElementById('console-log');
+            const line = document.createElement('div');
+            line.className = 'log-line ' + (type === 'error' ? 'log-error' : (type === 'success' ? 'log-success' : ''));
+            line.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            consoleBox.appendChild(line);
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+            console.log(msg);
+        }
+
+        // === 1. 参数配置 ===
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
         const CONFIG = {
-            // 手机端降级到 8000 粒子，电脑端 25000
-            count: isMobile ? 8000 : 25000, 
-            particleSize: isMobile ? 0.9 : 0.7, // 手机端粒子大一点弥补数量
+            count: isMobile ? 6000 : 25000, // 进一步降低手机粒子数以保命
+            particleSize: isMobile ? 1.0 : 0.7,
             treeHeight: 24,
             treeRadius: 8,
             colors: { champagneGold: 0xffd966, deepGreen: 0x03180a, accentRed: 0x990000 },
-            rotationCoeff: 2.5,
-            focusRadius: isMobile ? 0.7 : 0.55, // 手机判定范围宽一点
-            // 灯光策略 V71
             tree: { exposure: 2.2, bloom: 1.5, emissive: 8.0 },   
             scatter: { exposure: 1.2, bloom: 0.8, emissive: 1.0 }
         };
@@ -119,38 +132,51 @@
         let scene, camera, renderer, composer, bloomPass;
         let mainGroup, particleSystem = [], photoMeshGroup = new THREE.Group();
         let goldMat;
-        let handLandmarker, videoElement, canvasElement, canvasCtx;
+        let handLandmarker, videoElement;
         let STATE = { mode: 'TREE', handDetected: false, handX: 0, handY: 0 };
 
-        // === 1. 启动入口 ===
+        // === 2. 启动逻辑 ===
         window.startApp = async () => {
             const btn = document.getElementById('start-btn');
-            const status = document.getElementById('status-text');
-            btn.style.display = 'none';
-            status.innerText = "正在启动 3D 引擎...";
+            btn.style.display = 'none'; // 隐藏按钮防止重复点击
+            log("用户点击启动...");
 
             try {
+                // 1. 初始化 3D 场景
+                log("正在初始化 3D 引擎...");
                 initThree();
                 createParticles();
+                log("3D 引擎启动成功", 'success');
+
+                // 2. 尝试加载 AI (设置10秒超时，防止卡死)
+                log("开始加载 AI 模型 (需下载约10MB)...");
                 
-                status.innerText = "正在加载 AI 模型 (可能需要几秒)...";
-                await initMediaPipeCN();
+                const aiPromise = initMediaPipeCN();
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error("AI 加载超时")), 10000)
+                );
+
+                await Promise.race([aiPromise, timeoutPromise]);
                 
-                // 成功后隐藏启动页
-                document.getElementById('start-screen').style.opacity = 0;
-                setTimeout(() => document.getElementById('start-screen').remove(), 500);
-                
-                animate();
+                log("系统全部就绪！进入场景...", 'success');
+                enterScene();
+
             } catch (e) {
-                status.innerText = "启动失败: " + e.message;
-                status.style.color = 'red';
-                document.getElementById('error-log').innerText = e.message;
-                btn.style.display = 'block';
-                btn.innerText = "重试";
+                log("⚠️ 警告: " + e.message, 'error');
+                log("正在尝试以【演示模式】进入...");
+                // 即使 AI 失败，也强制进入场景，不让用户卡在黑屏
+                enterScene();
             }
         };
 
-        // === 2. 渲染引擎 ===
+        function enterScene() {
+            const screen = document.getElementById('start-screen');
+            screen.style.opacity = 0;
+            setTimeout(() => screen.remove(), 800);
+            animate();
+        }
+
+        // === 3. 渲染引擎 ===
         function initThree() {
             const container = document.getElementById('canvas-container');
             scene = new THREE.Scene();
@@ -158,12 +184,11 @@
             scene.fog = new THREE.FogExp2(0x000000, 0.01);
 
             camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 2, isMobile ? 65 : 50); // 手机端相机拉远一点
+            camera.position.set(0, 2, isMobile ? 70 : 50);
 
-            renderer = new THREE.WebGLRenderer({ antialias: !isMobile, alpha: false, powerPreference: "high-performance" });
+            renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            // 手机端限制像素比为 1.5 以保证流畅，电脑端 2.0
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
             renderer.toneMapping = THREE.ReinhardToneMapping;
             renderer.toneMappingExposure = 1.5; 
             container.appendChild(renderer.domElement);
@@ -173,7 +198,6 @@
             mainGroup.add(photoMeshGroup);
 
             const renderScene = new RenderPass(scene, camera);
-            // Bloom 设置
             bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
             bloomPass.threshold = 2.0; 
             bloomPass.strength = 0.6;
@@ -183,7 +207,6 @@
             composer.addPass(renderScene);
             composer.addPass(bloomPass);
             
-            // 灯光
             scene.add(new THREE.AmbientLight(0xffffff, 0.6));
             const innerLight = new THREE.PointLight(0xffaa00, 2, 20);
             innerLight.position.set(0, 5, 0); mainGroup.add(innerLight);
@@ -194,8 +217,8 @@
         }
 
         function createParticles() {
-            const sphereGeo = new THREE.SphereGeometry(isMobile ? 0.6 : 0.5, 8, 8); // 降低几何体精度
-            const boxGeo = new THREE.BoxGeometry(0.55, 0.55, 0.55);
+            const sphereGeo = new THREE.SphereGeometry(isMobile ? 0.6 : 0.5, 6, 6); 
+            const boxGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
             
             goldMat = new THREE.MeshStandardMaterial({ 
                 color: CONFIG.colors.champagneGold, metalness: 1.0, roughness: 0.1, emissiveIntensity: 2.0 
@@ -206,14 +229,12 @@
             for (let i = 0; i < CONFIG.count; i++) {
                 const rand = Math.random();
                 let mesh;
-                // 减少多边形数量
                 if (rand < 0.60) mesh = new THREE.Mesh(boxGeo, goldMat);
                 else mesh = new THREE.Mesh(sphereGeo, redMat);
 
                 const s = 0.4 + Math.random() * 0.5;
                 mesh.scale.set(s,s,s);
                 
-                // 树形排列
                 const h = CONFIG.treeHeight;
                 let t = Math.pow(Math.random(), 0.8);
                 const y = (t * h) - (h/2);
@@ -224,7 +245,7 @@
                 const p = {
                     mesh: mesh,
                     treePos: new THREE.Vector3(Math.cos(angle)*r, y, Math.sin(angle)*r),
-                    scatterPos: new THREE.Vector3((Math.random()-0.5)*40, (Math.random()-0.5)*40, (Math.random()-0.5)*20),
+                    scatterPos: new THREE.Vector3((Math.random()-0.5)*30, (Math.random()-0.5)*30, (Math.random()-0.5)*15),
                     offset: Math.random() * 100
                 };
                 mesh.position.copy(p.treePos);
@@ -233,48 +254,55 @@
             }
         }
 
-        // === 3. AI 初始化 (兼容手机) ===
+        // === 3. AI 初始化 (分步加载 + 日志) ===
         async function initMediaPipeCN() {
             videoElement = document.getElementById('webcam-video');
-            canvasElement = document.getElementById('webcam-canvas');
-            canvasCtx = canvasElement.getContext('2d');
 
+            // 1. 加载 WASM
+            log("正在下载视觉引擎 (WASM)...");
             const vision = await FilesetResolver.forVisionTasks("https://registry.npmmirror.com/@mediapipe/tasks-vision/0.10.3/files/wasm");
+            log("视觉引擎加载完成", 'success');
             
+            // 2. 加载模型
+            log("正在加载手势模型 (hand_landmarker.task)...");
             handLandmarker = await HandLandmarker.createFromOptions(vision, {
                 baseOptions: {
-                    modelAssetPath: "./hand_landmarker.task", // 本地文件
+                    modelAssetPath: "./hand_landmarker.task", 
                     delegate: "GPU"
                 },
                 runningMode: "VIDEO",
                 numHands: 1
             });
+            log("AI 模型加载完成", 'success');
             
-            // 手机端关键参数：facingMode: "user" (前置摄像头)
+            // 3. 启动摄像头
+            log("正在请求摄像头权限...");
             const constraints = { 
                 video: { 
                     facingMode: "user",
-                    width: { ideal: 320 }, // 降低分辨率提速
+                    width: { ideal: 320 },
                     height: { ideal: 240 }
                 } 
             };
             
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
             videoElement.srcObject = stream;
+            log("摄像头权限已获取", 'success');
             
             return new Promise((resolve) => {
                 videoElement.onloadedmetadata = () => {
                     videoElement.play();
                     predictWebcam();
+                    log("视频流开始播放", 'success');
                     resolve(true);
                 };
             });
         }
 
         async function predictWebcam() {
-            if (!videoElement || !canvasElement || !canvasCtx) return;
-            // 只有当视频正在播放且有大小时才预测
-            if (videoElement.videoWidth > 0 && handLandmarker) {
+            if (!videoElement || !handLandmarker) return;
+            // 确保视频正在播放
+            if (videoElement.currentTime > 0 && !videoElement.paused && !videoElement.ended) {
                 let startTime = performance.now();
                 const results = handLandmarker.detectForVideo(videoElement, startTime);
                 
@@ -284,15 +312,12 @@
                     STATE.handX = (lm[9].x - 0.5) * 2; 
                     STATE.handY = (lm[9].y - 0.5) * 2; 
                     processLogic(lm);
-                } else {
-                    STATE.handDetected = false;
                 }
             }
             requestAnimationFrame(predictWebcam);
         }
 
         function processLogic(lm) {
-            // 简单手势：张开手(fingers>=4) -> 散开
             let fingers = 0;
             if (lm[8].y < lm[6].y) fingers++;
             if (lm[12].y < lm[10].y) fingers++;
@@ -305,16 +330,13 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            const dt = 0.016; // 固定步长优化手机抖动
             
-            // 动态灯光
             let targetExp = (STATE.mode === 'TREE') ? CONFIG.tree.exposure : CONFIG.scatter.exposure;
             let targetEmissive = (STATE.mode === 'TREE') ? CONFIG.tree.emissive : CONFIG.scatter.emissive;
             
             renderer.toneMappingExposure = THREE.MathUtils.lerp(renderer.toneMappingExposure, targetExp, 0.05);
             if(goldMat) goldMat.emissiveIntensity = THREE.MathUtils.lerp(goldMat.emissiveIntensity, targetEmissive, 0.05);
 
-            // 旋转逻辑
             if (STATE.mode === 'SCATTER' && STATE.handDetected) {
                 mainGroup.rotation.y = THREE.MathUtils.lerp(mainGroup.rotation.y, mainGroup.rotation.y + STATE.handX * 0.05, 0.1);
                 mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, STATE.handY * 0.5, 0.1);
@@ -323,19 +345,16 @@
                 mainGroup.rotation.x = THREE.MathUtils.lerp(mainGroup.rotation.x, 0, 0.05);
             }
 
-            // 粒子运动
             const count = particleSystem.length;
             for(let i=0; i<count; i++) {
                 const p = particleSystem[i];
                 let target = (STATE.mode === 'TREE') ? p.treePos : p.scatterPos;
+                // 手机优化：直接设置不插值，或者插值系数大一点
+                p.mesh.position.x += (target.x - p.mesh.position.x) * 0.1;
+                p.mesh.position.y += (target.y - p.mesh.position.y) * 0.1;
+                p.mesh.position.z += (target.z - p.mesh.position.z) * 0.1;
                 
-                // 手机端减少 lerp 计算量，直接更新
-                p.mesh.position.x += (target.x - p.mesh.position.x) * 0.05;
-                p.mesh.position.y += (target.y - p.mesh.position.y) * 0.05;
-                p.mesh.position.z += (target.z - p.mesh.position.z) * 0.05;
-                
-                // 简单的呼吸效果
-                if(i % 2 === 0) { // 只对一半粒子做缩放，省资源
+                if(i % 3 === 0) { // 减少动画计算
                     const s = 1 + 0.3 * Math.sin(Date.now() * 0.003 + p.offset);
                     p.mesh.scale.set(s, s, s);
                 }
@@ -345,11 +364,7 @@
         }
 
         window.setMode = (m) => { STATE.mode = m; };
-        window.toggleFullScreen = () => {
-            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-            else if (document.exitFullscreen) document.exitFullscreen();
-        };
-
+        
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
